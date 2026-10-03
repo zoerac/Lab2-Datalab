@@ -359,7 +359,7 @@ int mul5Sat(int x) {
   int overflowShift = !!((shifted >> 2) ^ x);
   int overflowAdd = !!((~(shifted ^ x) & (shifted ^ result)) >> 31);
   int select = ~(overflowShift | overflowAdd) + 1;
-  int saturation = (x >> 31) ^ 0x7FFFFFFF;
+  int saturation = (x >> 31) ^ ~(1 << 31);
   return (result & ~select) | (saturation & select);
 }
 
@@ -559,16 +559,18 @@ int bitCount(int x) {
  */
 int bitReverse(int x)
 {
-  int mask = 0x55 | (0x55 << 8);
-  mask = mask | (mask << 16);
-  x = ((x >> 1) & mask) | ((x & mask) << 1);
-  mask = 0x33 | (0x33 << 8);
-  mask = mask | (mask << 16);
-  x = ((x >> 2) & mask) | ((x & mask) << 2);
-  mask = 0x0F | (0x0F << 8);
-  mask = mask | (mask << 16);
-  x = ((x >> 4) & mask) | ((x & mask) << 4);
-  mask = 0xFF | (0xFF << 16);
-  x = ((x >> 8) & mask) | ((x & mask) << 8);
-  return (x >> 16) | (x << 16);
+  int mask4 = 0x0F | (0x0F << 8);
+  int mask2;
+  int mask1;
+  int byteMask;
+  mask4 = mask4 | (mask4 << 16);
+  mask2 = mask4 ^ (mask4 << 2);
+  mask1 = mask2 ^ (mask2 << 1);
+  x = ((x >> 1) & mask1) | ((x & mask1) << 1);
+  x = ((x >> 2) & mask2) | ((x & mask2) << 2);
+  x = ((x >> 4) & mask4) | ((x & mask4) << 4);
+  byteMask = 0xFF << 8;
+  return (x << 24) | ((x & byteMask) << 8)
+       | ((x >> 8) & byteMask) | ((x >> 24) & 0xFF);
 }
+
